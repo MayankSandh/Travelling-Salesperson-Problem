@@ -14,7 +14,7 @@ pygame.display.set_caption("Graph Visualizer")
 graph = Graph(10, screen)
 # graph.generateConnectedGraph()
 graph.generateCompleteGraph()
-algos = Algorithms(graph)
+algos = Algorithms(graph, screen)
 otc = algos.oneTreeCost()
 
 
@@ -31,7 +31,8 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
         # graph.showGraph()
-        algos.showGraph(NN, graph.points)
+        # algos.showGraph(NN, graph.points)
+        algos.antColonyOptimisation(screen)
         # algos.animateGraph(prims, graph.points)
         pygame.display.flip()
 

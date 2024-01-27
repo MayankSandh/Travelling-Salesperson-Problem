@@ -1,7 +1,8 @@
 import random
 import pygame
-from time import sleep
 from copy import deepcopy
+import numpy as np
+
 white = (255, 255, 255)
 black = (0, 0, 0)
 red = (255, 0, 0)
@@ -76,7 +77,6 @@ class Graph:
         self.edges = edges
         self.edges2 = edges2
 
-
     def draw_lines(self, edge):
         pygame.draw.line(self.screen, red, edge[0], edge[1], 2)
 
@@ -92,9 +92,11 @@ class Graph:
 
 class Algorithms:
 
-    def __init__(self, graph: Graph):
+    def __init__(self, graph: Graph, screen):
         self.graph = graph
         self.MST_len = self.calculateMSTLength(self.graph.edges, self.graph.points)
+        self.screen = screen
+        self.OTC = self.oneTreeCost()
 
     def calculatePathLength(self, edges):
         return sum([edge[2] for edge in edges])
@@ -147,6 +149,7 @@ class Algorithms:
                     visitedCities.add(currPoint)
                     edges.append(edge)
                     break
+
         for edge_index in connected_edges[startingPoint]:
             edge = myedges[edge_index]
             if edge[0] == startingPoint:
@@ -313,15 +316,69 @@ class Algorithms:
                 max_t_cost = val 
         return max_t_cost
 
-
-        
-
-        
-        
-
-
-
-
-
-
-
+    def antColonyOptimisation(self, screen, iterations = 10000):
+        for edge in self.graph.edges:
+            self.draw_lines(edge, (255, 127, 127), 4)
+        self.draw_points(self.graph.points)
+        rewardMatrix = np.ones(shape=(self.graph.num_points, self.graph.num_points))
+        for i in range(1, iterations+1):
+            print(f"~~~~~~~~~~~~~~~~~ITERATION-{i}~~~~~~~~~~~~~~~~~~")
+            self.graph.screen.fill(white)
+            for edge in self.graph.edges:
+                self.draw_lines(edge, (255, 127, 127), 4)
+            self.draw_points(self.graph.points)
+            edges = []
+            startingPoint = self.graph.points[random.randint(0, self.graph.num_points - 1)]
+            connected_edges = dict()
+            for point in self.graph.points:
+                connected_edges[point] = []
+            i = 0
+            myedges = list(self.graph.edges)
+            for edge in myedges:
+                connected_edges[edge[0]].append(i)
+                connected_edges[edge[1]].append(i)
+                i+=1
+            currPoint = deepcopy(startingPoint)
+            visitedCities = set()
+            visitedCities.add(currPoint)
+            for k in range(self.graph.num_points - 1):
+                curr_edges = [myedges[i] for i in connected_edges[currPoint]]
+                allowed_edges = []
+                for edge in curr_edges:
+                    if edge[0] == currPoint:
+                        point_connected = edge[1]
+                    else:
+                        point_connected = edge[0]
+                    if point_connected not in visitedCities:
+                        allowed_edges.append(edge)
+                weights = np.reciprocal(np.array([i[2]/rewardMatrix[self.graph.points.index(i[0])][self.graph.points.index(i[1])] for i in allowed_edges]))
+                weights = weights/np.sum(weights)
+                chosen_edge = allowed_edges[np.random.choice(np.arange(len(weights)),  p=weights)]
+                if chosen_edge[0] == currPoint:
+                    currPoint = chosen_edge[1]
+                else:
+                    currPoint = chosen_edge[0]
+                edges.append(chosen_edge)
+                self.draw_lines(chosen_edge, (138,43,226), 6)
+                pygame.display.flip()
+                pygame.time.delay(100)
+                visitedCities.add(currPoint)
+            for edge_index in connected_edges[startingPoint]:
+                edge = myedges[edge_index]
+                if edge[0] == startingPoint:
+                    point_connected = edge[1]
+                else:
+                    point_connected = edge[0]
+                if point_connected == currPoint:
+                    edges.append(edge)
+                pygame.display.flip()
+                pygame.time.delay(100)
+            score = self.calculatePathLength(edges)
+            for edge in edges:
+                point0, point1 = edge[0], edge[1]
+                row = self.graph.points.index(point0)
+                col = self.graph.points.index(point1)
+                rewardMatrix[row][col] += 1/score
+                rewardMatrix[col][row] += 1/score
+            print(f"OTC-Ratio:- {self.calculatePathLength(edges)/self.OTC}")
+            print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
