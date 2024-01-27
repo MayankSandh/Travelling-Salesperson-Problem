@@ -54,20 +54,14 @@ class Graph:
             edges.add(tuple([point, point_to_connect, dist]))
             edges2.add(tuple([point, point_to_connect]))
         for i in range((self.num_points)//3):
-            print(f"Goo{i}")
             point1 = connected_points[random.randint(0, self.num_points -1)]
             point2 = connected_points[random.randint(0, self.num_points -1)]
-
-            print(f"the points first chosen are: {point1, point2}")
             while (point1 == point2) or (((point1, point2) in edges2) or ((point2, point1) in edges2)): 
                     point1 = connected_points[random.randint(0, self.num_points -1)]
                     point2 = connected_points[random.randint(0, self.num_points -1)]
-            print(f"the points selected are: {point1, point2}")
             dist = self.distance(point1, point2)
             edges.add(tuple([point1, point2, dist]))
             edges2.add(tuple([point1, point2]))
-        print(f"The current edges length {len(edges)}")
-        print(edges)
         self.edges = edges
         self.edges2 = edges2
 
@@ -83,6 +77,89 @@ class Graph:
         self.draw_points()
         for edge in self.edges:
             self.draw_lines(edge)
+
+class Algorithms:
+
+    def __init__(self, graph: Graph):
+        self.graph = graph
+    
+    def primsAlgorithm(self):
+        MST = []
+        connected_edges = dict()
+        for point in self.graph.points:
+            connected_edges[point] = []
+        i = 0
+        myedges = list(self.graph.edges)
+        for edge in self.graph.edges:
+            connected_edges[edge[0]].append(i)
+            connected_edges[edge[1]].append(i)
+            i+=1
+        MST_points = set()
+        non_MST_points = deepcopy(self.graph.points)
+        first = True
+        non_MST_points_len = deepcopy(self.graph.num_points)
+        point = non_MST_points[random.randint(0, non_MST_points_len - 1)]
+        while non_MST_points:
+            if first:
+                non_MST_points.remove(point)
+                MST_points.add(point)
+                first = False
+                continue
+
+            min_path_len = 1000000
+            min_path = -1
+            for point in MST_points:
+                for path_edge_index in connected_edges[point]:
+                    path_edge = myedges[path_edge_index]
+                    if path_edge[0] == point:
+                        point2 = path_edge[1]
+                    else:
+                        point2 = path_edge[0]
+                    if point2 in MST_points:
+                        continue
+                    if path_edge[2] < min_path_len:
+                        min_path_len = path_edge[2]
+                        min_path = path_edge_index
+            min_path_edge = myedges[min_path]
+
+            MST.append(min_path_edge)
+            if min_path_edge[0] in MST_points:
+                point2 = min_path_edge[1]
+            else:
+                point2 = min_path_edge[0]
+            MST_points.add(point2)
+            non_MST_points.remove(point2)
+        return MST
+            
+    def draw_lines(self, edge, color):
+        pygame.draw.line(self.graph.screen, color, edge[0], edge[1], 4)
+
+    def draw_points(self, points):
+        for point in points:
+            pygame.draw.circle(self.graph.screen, black, point, 5)
+
+    def animateGraph(self, edges, points):
+        for edge in self.graph.edges:
+            self.draw_lines(edge, (255, 127, 127))
+        self.draw_points(points)
+        for edge in edges:
+            self.draw_lines(edge, (138,43,226))
+            pygame.display.flip()
+            pygame.time.delay(100)
+            
+    # def animate_lines(self, edges, points):
+    #     self.draw_points(points)
+    #     for i in range(len(edges)-1):
+    #         start_point = edges[i][0]
+    #         end_point = edges[i+1][1]
+    #         for j in range(1, 51):  # Number of steps for animation
+    #             fraction = j / 50.0
+    #             x = int(start_point[0] + fraction * (end_point[0] - start_point[0]))
+    #             y = int(start_point[1] + fraction * (end_point[1] - start_point[1]))
+    #             pygame.draw.circle(self.graph.screen, red, (x, y), 2)
+    #             pygame.display.flip()
+    #             pygame.time.delay(10)  # Delay between each step
+
 
 
 
