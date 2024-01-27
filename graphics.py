@@ -65,6 +65,18 @@ class Graph:
         self.edges = edges
         self.edges2 = edges2
 
+    def generateCompleteGraph(self):
+        edges = set()
+        edges2 = set()
+        points = self.points
+        for i in range(len(points)-1):
+            for j in range(i+1, len(points)):
+                edges.add(tuple([points[i], points[j], self.distance(points[i], points[j])]))
+                edges2.add(tuple([points[i], points[j]]))
+        self.edges = edges
+        self.edges2 = edges2
+
+
     def draw_lines(self, edge):
         pygame.draw.line(self.screen, red, edge[0], edge[1], 2)
 
@@ -82,7 +94,70 @@ class Algorithms:
 
     def __init__(self, graph: Graph):
         self.graph = graph
+        self.MST_len = self.calculateMSTLength(self.graph.edges, self.graph.points)
+
+    def calculatePathLength(self, edges):
+        return sum([edge[2] for edge in edges])
     
+    def CycleDetected(self, edges, points, check_edge): # isolated edges should be coloured first
+        detector = dict()
+        for point in points:
+            detector[point] = False
+        point0, point1 = check_edge[0], check_edge[1]
+        detector[point0] = False
+        detector[point1] = False
+        for edge in edges:
+            point0, point1 = edge[0], edge[1]
+            if (detector[point0] and detector[point1]):
+                return True
+            else:
+                if detector[point0] == True:
+                    detector[point1] = True
+                elif detector[point1] == True:
+                    detector[point0] = True
+        point0, point1 = check_edge[0], check_edge[1]
+        if (detector[point0] and detector[point1]):
+            return True
+        return False
+
+    def NearestNeighbourHeuristic(self):
+        edges = []
+        startingPoint = self.graph.points[random.randint(0, self.graph.num_points - 1)]
+        connected_edges = dict()
+        for point in self.graph.points:
+            connected_edges[point] = []
+        i = 0
+        myedges = list(self.graph.edges)
+        for edge in myedges:
+            connected_edges[edge[0]].append(i)
+            connected_edges[edge[1]].append(i)
+            i+=1
+        currPoint = deepcopy(startingPoint)
+        visitedCities = set()
+        visitedCities.add(currPoint)
+        for k in range(self.graph.num_points-1):
+            curr_edges = sorted([myedges[i] for i in connected_edges[currPoint]], key=lambda x: x[2])
+            for edge in curr_edges:
+                if edge[0] == currPoint:
+                    point_connected = edge[1]
+                else:
+                    point_connected = edge[0]
+                if point_connected not in visitedCities:
+                    currPoint = point_connected
+                    visitedCities.add(currPoint)
+                    edges.append(edge)
+                    break
+        for edge_index in connected_edges[startingPoint]:
+            edge = myedges[edge_index]
+            if edge[0] == startingPoint:
+                point_connected = edge[1]
+            else:
+                point_connected = edge[0]
+            if point_connected == currPoint:
+                edges.append(edge)
+        print(f"MST-Ratio:- {self.calculatePathLength(edges)/self.MST_len}")
+        return edges
+
     def primsAlgorithm(self):
         MST = []
         connected_edges = dict()
@@ -90,7 +165,7 @@ class Algorithms:
             connected_edges[point] = []
         i = 0
         myedges = list(self.graph.edges)
-        for edge in self.graph.edges:
+        for edge in myedges:
             connected_edges[edge[0]].append(i)
             connected_edges[edge[1]].append(i)
             i+=1
@@ -130,36 +205,119 @@ class Algorithms:
             MST_points.add(point2)
             non_MST_points.remove(point2)
         return MST
-            
-    def draw_lines(self, edge, color):
-        pygame.draw.line(self.graph.screen, color, edge[0], edge[1], 4)
+
+    def calculateMSTLength(self, edges, points):
+        MST_len = 0
+        connected_edges = dict()
+        for point in points:
+            connected_edges[point] = []
+        i = 0
+        myedges = list(edges)
+        for edge in myedges:
+            connected_edges[edge[0]].append(i)
+            connected_edges[edge[1]].append(i)
+            i+=1
+        MST_points = set()
+        non_MST_points = deepcopy(points)
+        first = True
+        non_MST_points_len = deepcopy(len(point))
+        point = non_MST_points[random.randint(0, non_MST_points_len - 1)]
+        while non_MST_points:
+            if first:
+                non_MST_points.remove(point)
+                MST_points.add(point)
+                first = False
+                continue
+
+            min_path_len = 1000000
+            min_path = -1
+            for point in MST_points:
+                for path_edge_index in connected_edges[point]:
+                    path_edge = myedges[path_edge_index]
+                    if path_edge[0] == point:
+                        point2 = path_edge[1]
+                    else:
+                        point2 = path_edge[0]
+                    if point2 in MST_points:
+                        continue
+                    if path_edge[2] < min_path_len:
+                        min_path_len = path_edge[2]
+                        min_path = path_edge_index
+            min_path_edge = myedges[min_path]
+
+            MST_len+=min_path_edge[2]
+            if min_path_edge[0] in MST_points:
+                point2 = min_path_edge[1]
+            else:
+                point2 = min_path_edge[0]
+            MST_points.add(point2)
+            non_MST_points.remove(point2)
+        return MST_len    
+
+    def draw_lines(self, edge, color, width):
+        pygame.draw.line(self.graph.screen, color, edge[0], edge[1], width)
 
     def draw_points(self, points):
         for point in points:
             pygame.draw.circle(self.graph.screen, black, point, 5)
 
     def animateGraph(self, edges, points):
+        self.graph.screen.fill(white)
         for edge in self.graph.edges:
-            self.draw_lines(edge, (255, 127, 127))
+            self.draw_lines(edge, (255, 127, 127), 4)
         self.draw_points(points)
         for edge in edges:
-            self.draw_lines(edge, (138,43,226))
+            self.draw_lines(edge, (138,43,226), 6)
             pygame.display.flip()
-            pygame.time.delay(100)
-            
-    # def animate_lines(self, edges, points):
-    #     self.draw_points(points)
-    #     for i in range(len(edges)-1):
-    #         start_point = edges[i][0]
-    #         end_point = edges[i+1][1]
-    #         for j in range(1, 51):  # Number of steps for animation
-    #             fraction = j / 50.0
-    #             x = int(start_point[0] + fraction * (end_point[0] - start_point[0]))
-    #             y = int(start_point[1] + fraction * (end_point[1] - start_point[1]))
-    #             pygame.draw.circle(self.graph.screen, red, (x, y), 2)
-    #             pygame.display.flip()
-    #             pygame.time.delay(10)  # Delay between each step
+            pygame.time.delay(400)
+    
+    def showGraph(self, edges, points):
+        self.graph.screen.fill(white)
+        for edge in self.graph.edges:
+            self.draw_lines(edge, (255, 127, 127), 4)
+        self.draw_points(points)
+        for edge in edges:
+            self.draw_lines(edge, (138,43,226), 6)
 
+    def oneTreeCost(self):
+        connected_edges = dict()
+        top_two_edges = dict()
+        for point in self.graph.points:
+            connected_edges[point] = []
+            top_two_edges[point] = 0.0
+        i = 0
+        myedges = list(self.graph.edges)
+        for edge in myedges:
+            connected_edges[edge[0]].append(i)
+            connected_edges[edge[1]].append(i)
+            i+=1
+        for point in self.graph.points:
+            min = 1000000
+            min_2nd = 1000000
+            for edge in connected_edges[point]:
+                if myedges[edge][2] < min:
+                    min = myedges[edge][2]
+                elif myedges[edge][2] < min_2nd:
+                    min_2nd = myedges[edge][2]
+            top_two_edges[point] = min+min_2nd
+        max_t_cost = 0
+        for point in self.graph.points:
+            new_points = deepcopy(self.graph.points)
+            new_points.remove(point)
+            new_edges = deepcopy(myedges)
+            edges_to_be_removed = [myedges[i] for i in connected_edges[point]]
+            for edge_r in edges_to_be_removed:
+                new_edges.remove(edge_r)
+            val = self.calculateMSTLength(new_edges, new_points) + top_two_edges[point]
+            if max_t_cost < val:
+                max_t_cost = val 
+        return max_t_cost
+
+
+        
+
+        
+        
 
 
 

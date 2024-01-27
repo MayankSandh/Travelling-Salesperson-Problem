@@ -11,20 +11,18 @@ screen_height = 800
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Graph Visualizer")
 
-graph = Graph(6, screen)
-graph.generateConnectedGraph()
-
+graph = Graph(10, screen)
+# graph.generateConnectedGraph()
+graph.generateCompleteGraph()
 algos = Algorithms(graph)
+otc = algos.oneTreeCost()
 
-def draw_lines(edge, color):
-    pygame.draw.line(screen, color, edge[0], edge[1], 2)
 
-def draw_points(points):
-    for point in points:
-        pygame.draw.circle(screen, black, point, 5)
 
 
 prims = (algos.primsAlgorithm())
+NN = algos.NearestNeighbourHeuristic()
+# prims_length = 
 
 def main():
     running = True
@@ -32,10 +30,9 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-
-        graph.showGraph()
-        algos.animateGraph(prims, graph.points)
-        print("yeah")
+        # graph.showGraph()
+        algos.showGraph(NN, graph.points)
+        # algos.animateGraph(prims, graph.points)
         pygame.display.flip()
 
     pygame.quit()
